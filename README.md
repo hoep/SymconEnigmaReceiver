@@ -58,6 +58,10 @@ etwa startet sofort eine Aufnahme und sieht wie eine Abfrage aus.
 `$Minuten` ist eine **Dauer in Minuten**, hoechstens 1440. Ein Zeitstempel wird
 abgelehnt, ohne die Box anzufassen - siehe oben.
 
+IP-Symcon verlangt bei Prefix-Funktionen **alle** Parameter; die Vorgabewerte in
+der Signatur gelten nur fuer Aufrufe innerhalb des Moduls. Also
+`ER_Programm($id, $sRef, 240, 0)` und nicht `ER_Programm($id, $sRef, 240)`.
+
 ### Stufe 3 - Aufnahmen programmieren
 
 | Funktion | Wirkung | Gate |
