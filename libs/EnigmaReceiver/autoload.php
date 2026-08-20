@@ -16,3 +16,6 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/OpenWebIf.php';
 require_once __DIR__ . '/Geraet.php';
+require_once __DIR__ . '/Sender.php';
+require_once __DIR__ . '/Programm.php';
+require_once __DIR__ . '/Timer.php';

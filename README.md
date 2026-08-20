@@ -5,9 +5,15 @@ OpenWebIf-Schnittstelle. Eine Instanz je Geraet.
 
 ## Stand
 
-**Stufe 1: Grunddaten und Statistik.** Rein lesend.
+Alle drei Stufen gebaut:
 
-Geplant: Stufe 2 EPG und Senderlisten, Stufe 3 Programmierung von Aufnahmen.
+1. **Grunddaten und Statistik** - Zustand, Modell, Image, Laufzeit, Tuner, Platten
+2. **EPG und Senderlisten** - Bouquets, Sender, Programm je Sender im Zeitfenster
+3. **Programmierung** - Aufnahmen anlegen, loeschen, umschalten, hinter dem Gate
+
+Das Gate (`Scharf`) ist ab Werk **zu**. Bis es geoeffnet wird, verlaesst kein
+Schreibaufruf das Modul - der Receiver erfaehrt nichts davon.
+
 Der Plan liegt in `docs/PLAN.md`.
 
 ## Warum das Modul so vorsichtig ist
@@ -39,7 +45,40 @@ etwa startet sofort eine Aufnahme und sieht wie eine Abfrage aus.
 | `ER_Probe($id)` | Diagnose: welche Endpunkte antworten, wie schnell |
 | `ER_Wecken($id)` | Ruhezeit nach einer Zeitueberschreitung vorzeitig beenden |
 
-Alle Funktionen sind lesend.
+### Stufe 2 - Sender und Programm (lesend)
+
+| Funktion | Wirkung |
+|---|---|
+| `ER_SenderLesen($id)` | Senderliste holen und ablegen |
+| `ER_Sender($id)` | Bouquets und Sender als JSON (aus der Ablage) |
+| `ER_FindeSender($id, $Name)` | Sendername zu Service-Referenz ("ORF 1" findet "ORF1 HD") |
+| `ER_Programm($id, $SRef, $Minuten, $Start)` | Programm eines Senders im Zeitfenster |
+| `ER_SucheSendung($id, $SRef, $Start, $ToleranzMinuten)` | die Sendung zu einer erwarteten Startzeit |
+
+`$Minuten` ist eine **Dauer in Minuten**, hoechstens 1440. Ein Zeitstempel wird
+abgelehnt, ohne die Box anzufassen - siehe oben.
+
+### Stufe 3 - Aufnahmen programmieren
+
+| Funktion | Wirkung | Gate |
+|---|---|---|
+| `ER_TimerLesen($id)` | Timerliste holen | lesend |
+| `ER_Timer($id)` | programmierte Aufnahmen als JSON | lesend |
+| `ER_PlaneAufnahme($id, $Auftrag)` | **Vorschlag** - schickt nichts an den Receiver | lesend |
+| `ER_FuehreAus($id, $Vorschlag)` | den Vorschlag setzen | nur scharf |
+| `ER_LoescheTimer($id, $SRef, $Begin, $Ende)` | Timer loeschen | nur scharf |
+| `ER_SchalteTimer($id, $SRef, $Begin, $Ende)` | Timer ein/aus | nur scharf |
+| `ER_SetzeScharf($id, $Scharf)` | Gate oeffnen oder schliessen | - |
+
+Der Weg ist immer zweistufig: `PlaneAufnahme` liefert einen Vorschlag zum
+Ansehen, `FuehreAus` schickt ihn ab.
+
+Ein Timer hat **keine Kennung**. Seine Identitaet ist Service-Referenz + Beginn
++ Ende; Loeschen und Umschalten brauchen genau diese drei.
+
+Der Erfolg steht **nicht im HTTP-Code**: ein abgelehnter Timer kommt mit
+HTTP 200 und `"result": false`, bei Ueberschneidung zusaetzlich mit einer
+`conflicts`-Liste. Das Modul wertet `result` und `conflicts` aus.
 
 ## Variablen
 
@@ -53,6 +92,7 @@ leere Liste.
 ## Tests
 
     php tests/GeraetTest.php
+    php tests/ProgrammTest.php
 
-Laeuft ohne Symcon-Kernel gegen echte Antworten einer Vu+ Ultimo 4K
+Laufen ohne Symcon-Kernel gegen echte Antworten einer Vu+ Ultimo 4K
 (VTi 15.0.02, OWIF 1.2.8) unter `tests/daten/`.
