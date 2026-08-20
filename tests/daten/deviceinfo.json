@@ -1,0 +1,153 @@
+{
+ "tuners": [
+  {
+   "rec": "",
+   "live": "",
+   "type": "Vuplus DVB-S NIM(45208 FBC) (DVB-S2)",
+   "name": "Tuner A"
+  },
+  {
+   "rec": "",
+   "live": "",
+   "type": "Vuplus DVB-S NIM(45208 FBC) (DVB-S2)",
+   "name": "Tuner B"
+  },
+  {
+   "rec": "",
+   "live": "",
+   "type": "Vuplus DVB-S NIM(45208 FBC) (DVB-S2)",
+   "name": "Tuner C"
+  },
+  {
+   "rec": "",
+   "live": "",
+   "type": "Vuplus DVB-S NIM(45208 FBC) (DVB-S2)",
+   "name": "Tuner D"
+  },
+  {
+   "rec": "",
+   "live": "",
+   "type": "Vuplus DVB-S NIM(45208 FBC) (DVB-S2)",
+   "name": "Tuner E"
+  },
+  {
+   "rec": "",
+   "live": "",
+   "type": "Vuplus DVB-S NIM(45208 FBC) (DVB-S2)",
+   "name": "Tuner F"
+  },
+  {
+   "rec": "",
+   "live": "",
+   "type": "Vuplus DVB-S NIM(45208 FBC) (DVB-S2)",
+   "name": "Tuner G"
+  },
+  {
+   "rec": "",
+   "live": "",
+   "type": "Vuplus DVB-S NIM(45208 FBC) (DVB-S2)",
+   "name": "Tuner H"
+  },
+  {
+   "rec": "",
+   "live": "",
+   "type": "Vuplus DVB-S NIM(45208 FBC) (DVB-S2)",
+   "name": "Tuner I"
+  },
+  {
+   "rec": "",
+   "live": "",
+   "type": "Vuplus DVB-S NIM(45208 FBC) (DVB-S2)",
+   "name": "Tuner J"
+  },
+  {
+   "rec": "",
+   "live": "",
+   "type": "Vuplus DVB-S NIM(45208 FBC) (DVB-S2)",
+   "name": "Tuner K"
+  },
+  {
+   "rec": "",
+   "live": "",
+   "type": "Vuplus DVB-S NIM(45208 FBC) (DVB-S2)",
+   "name": "Tuner L"
+  },
+  {
+   "rec": "",
+   "live": "",
+   "type": "Vuplus DVB-S NIM(45208 FBC) (DVB-S2)",
+   "name": "Tuner M"
+  },
+  {
+   "rec": "",
+   "live": "",
+   "type": "Vuplus DVB-S NIM(45208 FBC) (DVB-S2)",
+   "name": "Tuner N"
+  },
+  {
+   "rec": "",
+   "live": "",
+   "type": "Vuplus DVB-S NIM(45208 FBC) (DVB-S2)",
+   "name": "Tuner O"
+  },
+  {
+   "rec": "",
+   "live": "",
+   "type": "Vuplus DVB-S NIM(45208 FBC) (DVB-S2)",
+   "name": "Tuner P"
+  },
+  {
+   "rec": "",
+   "live": "",
+   "type": "Vuplus DVB-S NIM(AVL6222) (DVB-S2)",
+   "name": "Tuner Q"
+  },
+  {
+   "rec": "",
+   "live": "",
+   "type": "Vuplus DVB-S NIM(AVL6222) (DVB-S2)",
+   "name": "Tuner R"
+  }
+ ],
+ "ifaces": [
+  {
+   "linkspeed": "100 MBit/s",
+   "gw": "192.0.2.1",
+   "friendlynic": "dsa",
+   "ip": "192.0.2.10",
+   "mac": "00:11:22:33:44:55",
+   "name": "eth0",
+   "v4prefix": 24,
+   "ipv4method": "DHCP",
+   "mask": "255.255.255.0",
+   "ipmethod": "SLAAC",
+   "ipv6": "",
+   "dhcp": true
+  }
+ ],
+ "machinebuild": "ultimo4k",
+ "mem1": "1616972 kB",
+ "mem3": "1344688 kB frei / 1616972 kB insgesamt",
+ "mem2": "1344688 kB",
+ "oever": "openvuplus 3.0",
+ "transcoding": true,
+ "fp_version": 0,
+ "kernelver": "3.14.28",
+ "kinopoisk": false,
+ "uptime": "68d 5:05",
+ "enigmaver": "2022-12-27-vti-master (5e368c84b)",
+ "driverdate": "3.14.28-20190424.r0",
+ "imagever": "15.0.02",
+ "friendlychipsetdescription": "Chipsatz",
+ "shares": [],
+ "friendlyimagedistro": "VTi",
+ "brand": "Vu+",
+ "boxtype": "ultimo4k",
+ "imagedistro": "VTi",
+ "EX": "",
+ "webifver": "OWIF 1.2.8",
+ "hdd": [],
+ "chipset": "7444s",
+ "model": "Ultimo 4K",
+ "friendlychipsettext": "7444s"
+}

@@ -34,7 +34,7 @@ $pruefe('laufzeit bleibt Text', $g['laufzeit'], '68d 5:05');
 $pruefe('tuner gesamt', $g['tunerGesamt'], 18);
 $pruefe('tuner frei', $g['tunerFrei'], 18);
 $pruefe('keine Platte gemeldet', count($g['platten']), 0);
-$pruefe('ip', $g['ip'], '192.168.1.0');
+$pruefe('ip aus den Testdaten', $g['ip'], '192.0.2.10');
 
 echo "\nDieselben Felder flach aus deviceinfo\n";
 $f = Geraet::ausGeraet($lade('deviceinfo.json'));

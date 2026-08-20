@@ -1,3 +1,9 @@
 *.bak-*
 *.log
 scripts_backup/
+
+# Echte Antworten der eigenen Box: sie enthalten MAC-Adresse, interne
+# Adressen, Aufnahmenamen und Freigabepfade. Sie bleiben lokal. Im Repo
+# liegen entschaerfte Fassungen mit derselben Struktur, damit die Tests
+# ueberall laufen.
+tests/daten/echt/

@@ -1,7 +1,7 @@
 # EnigmaReceiver - Plan fuer ein Symcon-Modul
 
 Stand 20.08.2026. Grundlage: Quelltext von OpenWebIf und Enigma2, Messung an
-192.168.1.0, Bestandsaufnahme der 35 Altskripte, Hausmuster der bestehenden Module.
+<Receiver 1>, Bestandsaufnahme der 35 Altskripte, Hausmuster der bestehenden Module.
 
 ## 1. Ausgangslage
 
@@ -9,9 +9,9 @@ Im Haus stehen drei Enigma-Receiver, von denen zur Zeit einer laeuft:
 
 | Adresse | Rolle | Gemessen |
 |---|---|---|
-| 192.168.1.0 | Vu+ Ultimo 4K, VTi 15.0.02, OWIF 1.2.8 | erreichbar, keine Anmeldung, Port 80 |
-| 192.168.1.0 | Dreambox | offline |
-| 192.168.1.0 | zweiter TVServer | offline |
+| <Receiver 1> | Vu+ Ultimo 4K, VTi 15.0.02, OWIF 1.2.8 | erreichbar, keine Anmeldung, Port 80 |
+| <Receiver 2> | Dreambox | offline |
+| <Receiver 3> | zweiter TVServer | offline |
 
 35 Skripte sprechen die Boxen an, davon laufen noch zwei nach Zeitplan: der
 Serienrecorder 44702 alle zwei Stunden und die Senderabfrage 52582 stuendlich.
