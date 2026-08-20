@@ -1,0 +1,3 @@
+*.bak-*
+*.log
+scripts_backup/

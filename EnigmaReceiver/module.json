@@ -1,0 +1,12 @@
+{
+    "id": "{34B2530B-BFFE-4691-9937-385917E12D51}",
+    "name": "EnigmaReceiver",
+    "type": 3,
+    "vendor": "",
+    "aliases": ["Enigma Receiver", "Vu+", "Dreambox", "OpenWebIf"],
+    "parentRequirements": [],
+    "childRequirements": [],
+    "implemented": [],
+    "prefix": "ER",
+    "url": "https://github.com/hoep/SymconEnigmaReceiver"
+}
