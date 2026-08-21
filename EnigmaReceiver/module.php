@@ -482,6 +482,52 @@ class EnigmaReceiver extends IPSModule
     }
 
     /**
+     * Sendungen im ganzen Programm suchen - nach dem Titel.
+     *
+     * Das ist die Suche, die die Weboberflaeche der Box auch anbietet: eine
+     * Teiltitelsuche im EPG-Cache. Sie traegt ihren Deckel selbst mit
+     * (hoechstens 128 Treffer, siehe OpenWebIf::ERLAUBT) und kennt kein
+     * Zeitfenster, das entgleisen koennte.
+     *
+     * Ausgeloest wird sie IMMER von einem Menschen, nie von einem Zeitplan.
+     *
+     * @param string $Text   Suchbegriff, mindestens drei Zeichen
+     * @param int    $Tage   Wie weit nach vorne (Vorgabe 14; 0 = ohne Grenze)
+     * @param int    $Grenze Hoechstzahl gelieferter Treffer (Vorgabe 60)
+     */
+    public function Suche(string $Text, int $Tage = 14, int $Grenze = 60): string
+    {
+        $t = trim($Text);
+        // Zwei Zeichen treffen halbe Programmwochen. Kein Netzverkehr dafuer.
+        if (mb_strlen($t) < 3) {
+            return $this->json(['ok' => false, 'fehler' => 'Suchbegriff zu kurz - mindestens drei Zeichen', 'text' => $t]);
+        }
+        $a = $this->frage('epgsearch', ['search' => $t]);
+        if (!$a['ok']) {
+            return $this->json(['ok' => false, 'fehler' => $a['fehler'], 'text' => $t]);
+        }
+        $jetzt = time();
+        $bis = $Tage > 0 ? $jetzt + $Tage * 86400 : PHP_INT_MAX;
+        $treffer = [];
+        foreach (Programm::ausEpg($a['daten']) as $e) {
+            // Was schon vorbei ist, hilft niemandem; die Box liefert es trotzdem mit.
+            if ($e['ende'] <= $jetzt || $e['start'] > $bis) {
+                continue;
+            }
+            $e['picon'] = $this->piconUrl((string) $e['ref']);
+            $treffer[] = Programm::mitFortschritt($e, $jetzt);
+        }
+        // Nach Startzeit, nicht nach Sender: gesucht wird "wann laeuft das".
+        usort($treffer, static fn(array $x, array $y): int => $x['start'] <=> $y['start']);
+        $gesamt = count($treffer);
+        if ($Grenze > 0 && $gesamt > $Grenze) {
+            $treffer = array_slice($treffer, 0, $Grenze);
+        }
+        return $this->json(['ok' => true, 'text' => $t, 'anzahl' => count($treffer), 'gesamt' => $gesamt,
+                            'ms' => $a['ms'], 'sendungen' => $treffer]);
+    }
+
+    /**
      * Adresse des Senderlogos (Picon) auf der Box.
      *
      * Kein Netzverkehr: der Pfad wird aus der Referenz gerechnet. Diese

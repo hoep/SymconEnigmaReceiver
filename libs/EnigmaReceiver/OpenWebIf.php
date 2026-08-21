@@ -27,9 +27,24 @@ final class OpenWebIf
     private const ERLAUBT = [
         'about', 'deviceinfo', 'statusinfo', 'currenttime', 'signal',
         'powerstate', 'getcurrent', 'bouquets', 'getservices', 'getallservices',
-        'timerlist', 'epgservice', 'epgservicenow', 'epgservicenext',
+        'timerlist', 'epgservice', 'epgservicenow', 'epgservicenext', 'epgsearch',
         'servicelistplayable', 'tunersignal', 'settings', 'movielist',
     ];
+
+    /**
+     * `epgsearch` ist bewusst dabei - im Gegensatz zu `epgbouquet`. Der
+     * Quelltext (services.py, getSearchEpg) zeigt warum: gesucht wird im
+     * EPG-Cache, und der Aufruf traegt seinen Deckel selbst mit -
+     * `epgcache.search(('IBDTSENR', 128, PARTIAL_TITLE_SEARCH, ...))`, also
+     * hoechstens 128 Treffer. Es gibt kein Zeitfenster, das entgleisen kann.
+     *
+     * ACHTUNG, Stolperstelle: derselbe Name bedeutet hier etwas anderes.
+     * `epgservice?endTime=` ist eine DAUER IN MINUTEN, `epgsearch?endtime=`
+     * dagegen ein ZEITSTEMPEL ("don't show events if begin after endtime").
+     * Dieses Modul schickt bei der Suche gar kein endtime mit und filtert
+     * selbst - bei hoechstens 128 Treffern kostet das nichts, und die
+     * Verwechslungsgefahr ist damit aus der Welt.
+     */
 
     /**
      * SCHREIBENDE Endpunkte. Sie sind ueber `hole()` NICHT erreichbar, sondern

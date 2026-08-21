@@ -209,6 +209,10 @@ final class Sender
         // Aufloesungs- und Regionszusaetze tragen fuer die Zuordnung nichts bei.
         $n = preg_replace('/\b(uhd|hd\+|hd|sd|austria|deutschland|germany|at|de)\b/u', ' ', $n) ?? $n;
         $n = preg_replace('/[^a-z0-9]+/u', '', $n) ?? $n;
+        // Angeklebtes HD: die Box schreibt "ORF 1HD", der Serienrecorder fragt
+        // nach "ORF1 HD". Die Wortgrenze oben greift da nicht - nach einer Ziffer
+        // ist "hd" kein eigenes Wort. Deshalb hier noch einmal am ENDE.
+        $n = preg_replace('/(uhd|hd|sd)$/u', '', (string) $n) ?? $n;
         return (string) $n;
     }
 }

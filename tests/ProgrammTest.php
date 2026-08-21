@@ -43,6 +43,14 @@ $pruefe('  gefunden', $orf['name'] ?? '', 'ORF1 HD');
 $pruefe('"Das Erste" findet HD-Fassung', Sender::finde($l['sender'], 'Das Erste')['name'] ?? '', 'Das Erste HD');
 $pruefe('Unsinn findet nichts', Sender::finde($l['sender'], 'Gibt Es Nicht 4711'), null);
 $pruefe('Vergleichsform ignoriert HD', Sender::form('ORF1 HD'), Sender::form('orf1'));
+// Die Box schreibt "ORF 1HD" - ohne Leerzeichen vor dem HD. Genau daran ist die
+// erste Programmierung aus dem Serienrecorder gescheitert.
+$pruefe('angeklebtes HD zaehlt auch nicht', Sender::form('ORF 1HD'), Sender::form('ORF1 HD'));
+$pruefe('  und findet den Sender', (Sender::finde([
+    ['ref' => '1:0:19:132F:3EF:1:C00000:0:0:0:', 'name' => 'ORF1 HD', 'bouquet' => 'F', 'bidx' => 0, 'pos' => 1],
+], 'ORF 1HD')['name'] ?? ''), 'ORF1 HD');
+$pruefe('ein Name, der auf HD endet, bleibt unterscheidbar',
+    Sender::form('AnixeHD Serie') === Sender::form('Anixe Serie'), false);
 
 echo "\nReferenz-Vergleichsform\n";
 $pruefe('Anhaengsel faellt weg',
@@ -200,6 +208,13 @@ $pruefe('epgservicenow erlaubt', OpenWebIf::istErlaubt('epgservicenow'), true);
 $pruefe('epgservicenext erlaubt', OpenWebIf::istErlaubt('epgservicenext'), true);
 $pruefe('epgbouquet NICHT erlaubt', OpenWebIf::istErlaubt('epgbouquet'), false);
 $pruefe('epgnow (Bouquet) NICHT erlaubt', OpenWebIf::istErlaubt('epgnow'), false);
+$pruefe('epgsearch erlaubt (Deckel 128 im Aufruf)', OpenWebIf::istErlaubt('epgsearch'), true);
+// Die Titelsuche kennt kein Minutenfenster - der Deckel auf endTime darf ihr
+// also nicht in die Quere kommen, und ein endtime schicken wir gar nicht erst.
+$t0 = microtime(true);
+$rs = $w->hole('epgsearch', ['search' => 'Tatort']);
+$pruefe('Suche laeuft in den Netzversuch (kein Vorab-Nein)',
+    str_contains($rs['fehler'], 'Positivliste') || str_contains($rs['fehler'], 'Minutenangabe'), false);
 
 echo "\n" . ($fehler === 0 ? "alles bestanden\n" : "$fehler Abweichung(en)\n");
 exit($fehler === 0 ? 0 : 1);
