@@ -97,6 +97,46 @@ final class Programm
     }
 
     /**
+     * Die eine Sendung aus einer `epgservicenow`- oder `epgservicenext`-Antwort.
+     *
+     * Beide Endpunkte liefern dieselbe Bauform wie `epgservice`, nur mit genau
+     * einem Ereignis (gemessen: 1091 bzw. 239 Bytes, 11 bzw. 9 ms) - und ohne
+     * jedes Zeitfenster. Genau deshalb sind sie fuer eine Uebersicht ueber viele
+     * Sender die richtige Wahl: es gibt nichts zu deckeln.
+     *
+     * @param array<mixed> $daten
+     * @return array<string,mixed>|null
+     */
+    public static function ausEpgEinzeln(array $daten): ?array
+    {
+        $l = self::ausEpg($daten);
+        return $l[0] ?? null;
+    }
+
+    /**
+     * Laufende Sendung um Restzeit und Fortschritt ergaenzen.
+     *
+     * Die Box schickt zwar ein `remaining` mit, aber nicht in jeder Fassung und
+     * nicht bei `epgservice`. Gerechnet wird deshalb selbst - aus Start, Dauer
+     * und der uebergebenen Jetztzeit.
+     *
+     * @param array<string,mixed> $s
+     * @return array<string,mixed>
+     */
+    public static function mitFortschritt(array $s, int $jetzt): array
+    {
+        $start = (int) ($s['start'] ?? 0);
+        $ende  = (int) ($s['ende'] ?? 0);
+        $dauer = max(0, $ende - $start);
+        $s['rest']        = ($ende > $jetzt) ? $ende - $jetzt : 0;
+        $s['laeuft']      = ($start <= $jetzt && $ende > $jetzt);
+        $s['fortschritt'] = ($dauer > 0 && $jetzt >= $start)
+            ? max(0, min(100, (int) round(($jetzt - $start) / $dauer * 100)))
+            : 0;
+        return $s;
+    }
+
+    /**
      * Die Sendung, die zu einer erwarteten Startzeit passt.
      *
      * Gesucht wird die mit dem KLEINSTEN Abstand zur erwarteten Zeit, nicht die

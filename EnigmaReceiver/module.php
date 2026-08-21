@@ -36,6 +36,34 @@ class EnigmaReceiver extends IPSModule
     private const PROFIL_STANDBY    = 'ER.Standby';
     private const PROFIL_AUFNAHME   = 'ER.Aufnahme';
 
+    /**
+     * Hoechstzahl Sender je Uebersichtsabfrage.
+     *
+     * Jeder Sender kostet ein bis zwei kleine Anfragen (11 bzw. 9 ms). Zwanzig
+     * Sender sind damit rund 400 ms, in denen die Box nebenher noch fernsehen
+     * soll - mehr ist keine Uebersicht mehr, sondern eine Belastung.
+     */
+    private const MAX_UEBERSICHT = 20;
+
+    /**
+     * Kuerzester Abstand zwischen zwei echten Uebersichtslaeufen - unabhaengig
+     * davon, was der Aufrufer wuenscht.
+     *
+     * Eine Seite, die jede Sekunde neu zeichnet, wuerde die Box sonst im
+     * Sekundentakt befragen. Innerhalb dieser Spanne kommt die Antwort aus der
+     * Ablage; die Box merkt von einem zweiten Aufruf nichts.
+     */
+    private const UEBERSICHT_MINDESTABSTAND = 15;
+
+    /**
+     * Wird eine einzelne Abfrage so langsam, bricht die Schleife ab.
+     *
+     * Die Box beantwortet Abfragen in demselben Prozess, in dem sie auch das
+     * Fernsehbild macht. Antwortet sie zaeh, ist sie beschaeftigt - dann sind
+     * die restlichen neunzehn Abfragen genau das Falsche.
+     */
+    private const UEBERSICHT_ABBRUCH_MS = 1500;
+
     public function Create(): void
     {
         parent::Create();
@@ -66,6 +94,11 @@ class EnigmaReceiver extends IPSModule
         $this->RegisterAttributeString('Fassung', '');
         $this->RegisterAttributeString('SenderCache', '');
         $this->RegisterAttributeInteger('SenderStand', 0);
+        // Kurzzeit-Ablage der Uebersicht "was laeuft jetzt". Eine Seite, die
+        // alle paar Sekunden neu zeichnet, darf die Box nicht jedes Mal
+        // befragen - sie beantwortet Abfragen im selben Prozess, in dem sie
+        // auch das Fernsehbild macht.
+        $this->RegisterAttributeString('JetztCache', '');
 
         $this->RegisterTimer('ER_Status', 0, 'ER_Aktualisieren($_IPS[\'TARGET\']);');
         $this->RegisterTimer('ER_Geraet', 0, 'ER_GeraetLesen($_IPS[\'TARGET\']);');
@@ -250,8 +283,19 @@ class EnigmaReceiver extends IPSModule
         if ($l === null) {
             return $this->json(['ok' => false, 'fehler' => 'Senderliste nicht lesbar']);
         }
-        return $this->json(['ok' => true, 'stand' => date('d.m. H:i', $this->ReadAttributeInteger('SenderStand'))]
-            + $l);
+        // Picon-Adressen erst hier anhaengen, nicht in der Ablage: sie haengen
+        // an der Adresse der Box, und die kann sich aendern, ohne dass die
+        // Senderliste veraltet.
+        $host  = trim($this->ReadPropertyString('Host'));
+        $basis = $host === '' ? '' : (new OpenWebIf($host, $this->ReadPropertyInteger('Port')))->basis() . 'picon/';
+        if ($basis !== '') {
+            foreach ($l['sender'] as $i => $x) {
+                $n = Sender::piconName((string) $x['ref']);
+                $l['sender'][$i]['picon'] = $n === '' ? '' : $basis . $n . '.png';
+            }
+        }
+        return $this->json(['ok' => true, 'stand' => date('d.m. H:i', $this->ReadAttributeInteger('SenderStand')),
+                            'piconBasis' => $basis] + $l);
     }
 
     /** Sender ueber den Namen finden. Liefert die Service-Referenz. */
@@ -317,6 +361,146 @@ class EnigmaReceiver extends IPSModule
         return $treffer === null
             ? $this->json(['ok' => false, 'fehler' => 'keine Sendung im Fenster', 'geprueft' => $p['anzahl']])
             : $this->json(['ok' => true, 'sendung' => $treffer]);
+    }
+
+    /**
+     * Was auf einem Sender gerade laeuft - und was danach kommt.
+     *
+     * Zwei winzige Abfragen (gemessen: 1091 und 239 Bytes, 11 und 9 ms) statt
+     * eines EPG-Fensters, das man erst zurechtrechnen muesste. `epgservicenow`
+     * kennt kein `endTime` und kann die Box deshalb gar nicht ueberlasten.
+     *
+     * @param string $SRef        Service-Referenz ODER Sendername ("ORF 1")
+     * @param bool   $MitNaechster Auch die folgende Sendung holen
+     */
+    public function Laeuft(string $SRef, bool $MitNaechster = true): string
+    {
+        $ref = $this->zuReferenz($SRef);
+        if ($ref === '') {
+            return $this->json(['ok' => false, 'fehler' => 'kein Sender zu "' . $SRef . '"']);
+        }
+        $e = $this->jetztUndGleich($ref, $MitNaechster);
+        if (!$e['ok']) {
+            return $this->json(['ok' => false, 'fehler' => $e['fehler']]);
+        }
+        return $this->json(['ok' => true] + $e['sender']);
+    }
+
+    /**
+     * Uebersicht ueber mehrere Sender: was laeuft jetzt, was folgt.
+     *
+     * Der Baustein fuer eine Fernsehseite. Angegeben werden Sendernamen oder
+     * Referenzen, getrennt durch Komma oder Zeilenumbruch; auch eine JSON-Liste
+     * wird angenommen.
+     *
+     * Zwei Schutzvorkehrungen, beide aus der Erfahrung mit dieser Box:
+     * 1. Die Zahl der Sender ist gedeckelt (MAX_UEBERSICHT). OpenWebIf laeuft im
+     *    Hauptprozess von Enigma2 - eine lange Schleife blockiert die
+     *    Fernbedienung.
+     * 2. Das Ergebnis liegt kurz in einer Ablage. Eine Seite, die im
+     *    Sekundentakt neu zeichnet, bekommt daraus ihre Antwort, ohne dass die
+     *    Box es merkt.
+     *
+     * @param string $Sender            Namen oder Referenzen, Komma-getrennt oder als JSON-Liste
+     * @param bool   $MitNaechster      auch die Folgesendung je Sender
+     * @param int    $MaxAlterSekunden  Hoechstalter der Ablage (Vorgabe 60). Kleinere Werte als
+     *                                  der Mindestabstand von 15 s heben ihn nicht auf.
+     */
+    public function Uebersicht(string $Sender, bool $MitNaechster = true, int $MaxAlterSekunden = 60): string
+    {
+        $wunsch = $this->zerlegeListe($Sender);
+        if ($wunsch === []) {
+            return $this->json(['ok' => false, 'fehler' => 'keine Sender angegeben']);
+        }
+        $zuviel = [];
+        if (count($wunsch) > self::MAX_UEBERSICHT) {
+            $zuviel = array_slice($wunsch, self::MAX_UEBERSICHT);
+            $wunsch = array_slice($wunsch, 0, self::MAX_UEBERSICHT);
+        }
+
+        // Ablage: derselbe Wunsch, jung genug, dieselbe Frage nach der Folgesendung.
+        // Der Mindestabstand gilt IMMER - auch bei MaxAlterSekunden = 0. Sonst
+        // haette eine Seite mit kurzem Takt die Box im Sekundentakt am Hals.
+        $schluessel = md5(implode('|', $wunsch) . ($MitNaechster ? '+n' : ''));
+        $grenze = max(self::UEBERSICHT_MINDESTABSTAND, $MaxAlterSekunden);
+        $alt = json_decode($this->ReadAttributeString('JetztCache'), true);
+        if (is_array($alt) && ($alt['schluessel'] ?? '') === $schluessel
+            && (time() - (int) ($alt['stand'] ?? 0)) <= $grenze) {
+            $alt['antwort']['ausAblage'] = time() - (int) $alt['stand'];
+            return $this->json($alt['antwort']);
+        }
+
+        $t0 = microtime(true);
+        $liste = [];
+        $fehler = [];
+        $abbruch = '';
+        foreach ($wunsch as $w) {
+            $ref = $this->zuReferenz($w);
+            if ($ref === '') {
+                $fehler[] = 'kein Sender zu "' . $w . '"';
+                continue;
+            }
+            $e = $this->jetztUndGleich($ref, $MitNaechster);
+            if (!$e['ok']) {
+                // Ein stiller Ausfall waere hier das Schlimmste: die Seite saehe
+                // vollstaendig aus und zeigte einen Sender einfach nicht.
+                $fehler[] = $w . ': ' . $e['fehler'];
+                // Zwei Abbruchgruende, beide ohne Ratespiel im Fehlertext:
+                // die Instanz ist in der Ruhezeit (dann kostet jede weitere
+                // Abfrage nur Zeit und liefert denselben Satz), oder die Box
+                // hat wirklich lange gebraucht, bevor sie aufgab.
+                if ($this->ReadAttributeInteger('RuheBis') > time()
+                    || (int) ($e['ms'] ?? 0) >= self::UEBERSICHT_ABBRUCH_MS) {
+                    $abbruch = 'Box antwortet nicht (' . $e['fehler'] . ') - Rest uebersprungen';
+                    break;
+                }
+                continue;
+            }
+            $liste[] = $e['sender'];
+            if ((int) ($e['sender']['ms'] ?? 0) > self::UEBERSICHT_ABBRUCH_MS) {
+                $abbruch = sprintf('Box braucht %d ms je Sender - Rest uebersprungen, um sie nicht zu belasten',
+                    (int) $e['sender']['ms']);
+                break;
+            }
+        }
+        $antwort = ['ok' => true, 'anzahl' => count($liste), 'ms' => (int) round((microtime(true) - $t0) * 1000),
+                    'stand' => date('H:i:s'), 'sender' => $liste];
+        if ($fehler !== []) {
+            $antwort['fehler'] = $fehler;
+        }
+        if ($zuviel !== []) {
+            $antwort['weggelassen'] = $zuviel;
+            $antwort['hinweis'] = sprintf('hoechstens %d Sender je Abfrage', self::MAX_UEBERSICHT);
+        }
+        if ($abbruch !== '') {
+            $antwort['abgebrochen'] = $abbruch;
+        }
+        // Immer ablegen - die Ablage ist die Bremse, nicht nur eine Beschleunigung.
+        $this->WriteAttributeString('JetztCache',
+            $this->json(['stand' => time(), 'schluessel' => $schluessel, 'antwort' => $antwort]));
+        return $this->json($antwort);
+    }
+
+    /**
+     * Adresse des Senderlogos (Picon) auf der Box.
+     *
+     * Kein Netzverkehr: der Pfad wird aus der Referenz gerechnet. Diese
+     * OpenWebIf-Fassung hat keinen Endpunkt dafuer (`/api/getpicon` -> 404),
+     * die Datei liegt aber unter `/picon/<Referenz mit _>.png` (gemessen:
+     * 6,3 KB PNG).
+     *
+     * @param string $SRef Service-Referenz ODER Sendername
+     */
+    public function Picon(string $SRef): string
+    {
+        $ref = $this->zuReferenz($SRef);
+        if ($ref === '') {
+            return $this->json(['ok' => false, 'fehler' => 'kein Sender zu "' . $SRef . '"']);
+        }
+        $url = $this->piconUrl($ref);
+        return $url === ''
+            ? $this->json(['ok' => false, 'fehler' => 'Referenz ergibt keinen Picon-Namen', 'ref' => $ref])
+            : $this->json(['ok' => true, 'ref' => $ref, 'picon' => $url]);
     }
 
     // ---- Stufe 3: programmierte Aufnahmen ---------------------------------
@@ -465,6 +649,131 @@ class EnigmaReceiver extends IPSModule
     }
 
     // ==================================================================
+
+    /**
+     * Jetzt laufende und folgende Sendung eines Senders.
+     *
+     * @return array{ok:bool,fehler:string,ms:int,sender:array<string,mixed>}
+     */
+    private function jetztUndGleich(string $ref, bool $mitNaechster): array
+    {
+        $a = $this->frage('epgservicenow', ['sRef' => $ref]);
+        if (!$a['ok']) {
+            return ['ok' => false, 'fehler' => $a['fehler'], 'ms' => (int) $a['ms'], 'sender' => []];
+        }
+        $jetzt = time();
+        $n = Programm::ausEpgEinzeln($a['daten']);
+        $eintrag = [
+            'ref'   => $ref,
+            'name'  => (string) ($n['sender'] ?? ''),
+            'picon' => $this->piconUrl($ref),
+            'ms'    => $a['ms'],
+            'jetzt' => $n === null ? null : Programm::mitFortschritt($n, $jetzt),
+        ];
+        if ($mitNaechster) {
+            $b = $this->frage('epgservicenext', ['sRef' => $ref]);
+            $g = $b['ok'] ? Programm::ausEpgEinzeln($b['daten']) : null;
+            $eintrag['gleich'] = $g === null ? null : Programm::mitFortschritt($g, $jetzt);
+            $eintrag['ms'] += (int) $b['ms'];
+        }
+        // Der Sendername steht nur im Ereignis. Ohne laufende Sendung (Sender
+        // aus dem Programm genommen) bleibt er leer - dann aus der Senderliste.
+        if ($eintrag['name'] === '') {
+            $eintrag['name'] = $this->nameZuReferenz($ref);
+        }
+        return ['ok' => true, 'fehler' => '', 'ms' => (int) $eintrag['ms'], 'sender' => $eintrag];
+    }
+
+    /** Adresse des Picons zu einer Referenz, leer wenn die Referenz nichts hergibt. */
+    private function piconUrl(string $ref): string
+    {
+        $n = Sender::piconName($ref);
+        if ($n === '') {
+            return '';
+        }
+        $host = trim($this->ReadPropertyString('Host'));
+        if ($host === '') {
+            return '';
+        }
+        $w = new OpenWebIf($host, $this->ReadPropertyInteger('Port'));
+        return $w->basis() . 'picon/' . $n . '.png';
+    }
+
+    /**
+     * Sendername oder Referenz zu einer Service-Referenz aufloesen.
+     *
+     * Ein Aufrufer soll "ORF 1" schreiben duerfen. Was schon wie eine Referenz
+     * aussieht (Doppelpunkte), wird nicht angefasst - eine Namenssuche koennte
+     * daraus sonst einen anderen Sender machen.
+     */
+    private function zuReferenz(string $eingabe): string
+    {
+        $e = trim($eingabe);
+        if ($e === '') {
+            return '';
+        }
+        if (substr_count($e, ':') >= 9) {
+            return $e;
+        }
+        $l = $this->senderAusAblage();
+        if ($l === null) {
+            return '';
+        }
+        $s = Sender::finde($l['sender'], $e);
+        return $s === null ? '' : (string) $s['ref'];
+    }
+
+    /** Anzeigename aus der Senderliste zu einer Referenz. */
+    private function nameZuReferenz(string $ref): string
+    {
+        $l = $this->senderAusAblage();
+        if ($l === null) {
+            return '';
+        }
+        $k = Sender::schluessel($ref);
+        foreach ($l['sender'] as $s) {
+            if (Sender::schluessel((string) $s['ref']) === $k) {
+                return (string) $s['name'];
+            }
+        }
+        return '';
+    }
+
+    /**
+     * Senderliste aus einer Eingabe: JSON-Liste, Komma- oder Zeilenliste.
+     *
+     * @return list<string>
+     */
+    private function zerlegeListe(string $eingabe): array
+    {
+        $e = trim($eingabe);
+        if ($e === '') {
+            return [];
+        }
+        if ($e[0] === '[') {
+            $j = json_decode($e, true);
+            if (is_array($j)) {
+                $out = [];
+                foreach ($j as $x) {
+                    if (is_scalar($x) && trim((string) $x) !== '') {
+                        $out[] = trim((string) $x);
+                    }
+                }
+                return $out;
+            }
+        }
+        // Referenzen enthalten selbst keine Kommas, aber Doppelpunkte - deshalb
+        // ist das Komma (bzw. der Zeilenumbruch) das einzige Trennzeichen.
+        $teile = preg_split('/[,\r\n]+/', $e) ?: [];
+        $out = [];
+        foreach ($teile as $t) {
+            $t = trim($t);
+            if ($t !== '') {
+                $out[] = $t;
+            }
+        }
+        return $out;
+    }
 
     /**
      * Eine Abfrage an die Box - serialisiert, mit Ruhezeit nach Timeout.

@@ -1,0 +1,17 @@
+{
+  "events": [
+    {
+      "sname": "Beispiel 1 HD",
+      "title": "Beispielsendung",
+      "begin_timestamp": 1700000000,
+      "now_timestamp": 1700001800,
+      "sref": "1:0:19:1111:2222:1:C00000:0:0:0:",
+      "id": 1234,
+      "duration_sec": 3600,
+      "shortdesc": "Erste Folge",
+      "longdesc": "Ausfuehrliche Beschreibung der Beispielsendung.",
+      "remaining": 1800
+    }
+  ],
+  "result": true
+}

@@ -183,9 +183,39 @@ Oeffentlich:
 - `ER_SucheSendung($id, string $SRef, int $Start, int $Toleranz)` - die Sendung um eine
   Startzeit herum, mit exakter Anfangs- und Endzeit und der Event-ID
 
+- `ER_Laeuft($id, string $SRef, bool $MitNaechster)` - laufende und folgende Sendung
+  eines Senders, ueber `epgservicenow`/`epgservicenext`; diese Endpunkte kennen kein
+  `endTime` und koennen die Box daher gar nicht ueberlasten
+- `ER_Uebersicht($id, string $Sender, bool $MitNaechster, int $MaxAlterSekunden)` -
+  dasselbe fuer eine Liste von Sendern, der Baustein fuer eine Fernsehseite
+- `ER_Picon($id, string $SRef)` - Adresse des Senderlogos, gerechnet aus der Referenz
+
 Abnahme: Senderliste stimmt mit dem Bouquet der Box ueberein; ein Fenster von 240 Minuten
 liefert unter 20 KB in unter 100 ms; ein Aufruf mit `Minuten = 999999` wird vom Modul
 abgelehnt, ohne die Box anzufassen; zwei gleichzeitige Aufrufe werden serialisiert.
+
+**Erfuellt am 21.08.2026** an der Vu+ Ultimo 4K (#<ID>): Senderliste 348 Sender in
+8 Bouquets; EPG 240 Minuten = 10 Sendungen, 3805 Bytes, 16 ms; `Minuten = 999999`
+abgelehnt in 0 ms ohne Netzverkehr; `SucheSendung` trifft die Sendung mit dem
+kleinsten Abstand samt Event-ID.
+
+**Uebersicht - drei Bremsen.** Weil OpenWebIf im Hauptprozess von Enigma2 laeuft, ist
+die Zahl der Abfragen der eigentliche Kostenfaktor, nicht ihre Groesse:
+
+1. hoechstens 20 Sender je Aufruf (`MAX_UEBERSICHT`),
+2. Mindestabstand 15 Sekunden zwischen zwei echten Laeufen; dazwischen antwortet die
+   Ablage. Das gilt auch, wenn der Aufrufer `MaxAlterSekunden = 0` uebergibt - eine
+   Seite mit kurzem Zeichentakt darf die Box nicht im Sekundentakt befragen,
+3. Abbruch der Schleife, sobald eine einzelne Abfrage ueber 1500 ms braucht oder die
+   Instanz in der Ruhezeit steht.
+
+Gemessen (10 Sender, 20 Abfragen): 176 ms gesamt, 17 ms je Sender; die Antwortzeit
+der Box auf `statusinfo` lag vorher wie nachher bei 9 ms. Picons: 10 von 10 vorhanden,
+je rund 6,3 KB.
+
+Bewusst NICHT verwendet: `epgnow`/`epgbouquet` mit einer Bouquet-Referenz. Eine
+Anfrage statt zwanzig waere verlockend, aber genau diese Familie hat die Box zweimal
+lahmgelegt; sie steht deshalb nicht auf der Positivliste.
 
 ### Stufe 3 - Programmierung
 

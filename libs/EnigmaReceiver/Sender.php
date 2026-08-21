@@ -98,6 +98,13 @@ final class Sender
         return strtoupper(implode(':', array_slice($f, 0, 10)));
     }
 
+    /** Ist die Referenz eine HD-Fassung? Feld 2 ist der Diensttyp, 19 = HD. */
+    public static function istHd(string $ref): bool
+    {
+        $f = explode(':', trim($ref));
+        return strtoupper(trim((string) ($f[2] ?? ''))) === '19';
+    }
+
     public static function istMarker(string $ref): bool
     {
         $f = explode(':', trim($ref));
@@ -121,11 +128,24 @@ final class Sender
         if ($g === '') {
             return null;
         }
-        // 1. genaue Uebereinstimmung der entschaerften Form
+        // 1. genaue Uebereinstimmung der entschaerften Form. Es gibt oft mehrere:
+        //    "ORF2" und "ORF2 HD" ergeben beide "orf2". Dann gewinnt die
+        //    HD-Fassung (Diensttyp 19) - die SD-Eintraege in diesen Bouquets sind
+        //    vielfach Karteileichen ohne Programmdaten, und eine Uebersicht, die
+        //    fuer einen Sender nichts anzeigt, sieht aus wie ein Fehler.
+        $treffer = [];
         foreach ($liste as $s) {
             if (self::form($s['name']) === $g) {
-                return $s;
+                $treffer[] = $s;
             }
+        }
+        if ($treffer !== []) {
+            foreach ($treffer as $s) {
+                if (self::istHd((string) $s['ref'])) {
+                    return $s;
+                }
+            }
+            return $treffer[0];
         }
         // 2. Sender, dessen Name mit dem Gesuchten beginnt ("ORF2" -> "ORF2 Europe")
         foreach ($liste as $s) {
@@ -135,6 +155,33 @@ final class Sender
             }
         }
         return null;
+    }
+
+    /**
+     * Dateiname des Picons zu einer Service-Referenz.
+     *
+     * Enigma2 legt die Senderlogos als `<Referenz mit _ statt :>.png` unter
+     * `/picon/` ab - aus `1:0:19:132F:3EF:1:C00000:0:0:0:` wird
+     * `1_0_19_132F_3EF_1_C00000_0_0_0.png`. Nur die ersten zehn Felder zaehlen,
+     * ein angehaengter Sendername im Bouquet gehoert nicht dazu.
+     *
+     * Diese Fassung von OpenWebIf hat KEINEN Endpunkt dafuer (`/api/getpicon`
+     * antwortet mit 404) - der Pfad wird also gerechnet, nicht erfragt. Das ist
+     * kein Nachteil: die Datei holt spaeter der Browser, nicht das Modul.
+     *
+     * @return string Dateiname ohne Endung, leer wenn die Referenz nicht taugt
+     */
+    public static function piconName(string $ref): string
+    {
+        $f = explode(':', trim($ref));
+        if (count($f) < 10) {
+            return '';
+        }
+        $n = strtoupper(implode('_', array_slice($f, 0, 10)));
+        // Streaming-Referenzen haengen hinter das zehnte Feld ihre Adresse; die
+        // ist oben schon abgeschnitten. Was danach noch Sonderzeichen enthaelt,
+        // ergibt keinen Dateinamen.
+        return preg_match('/^[0-9A-Z_]+$/', $n) === 1 ? $n : '';
     }
 
     /** Vergleichsform eines Sendernamens. */

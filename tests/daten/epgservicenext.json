@@ -1,0 +1,17 @@
+{
+  "events": [
+    {
+      "sname": "Beispiel 1 HD",
+      "title": "Nachrichten",
+      "begin_timestamp": 1700003600,
+      "now_timestamp": 1700001800,
+      "sref": "1:0:19:1111:2222:1:C00000:0:0:0:",
+      "id": 1235,
+      "duration_sec": 900,
+      "shortdesc": "",
+      "longdesc": "",
+      "remaining": 2700
+    }
+  ],
+  "result": true
+}

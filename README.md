@@ -54,6 +54,27 @@ etwa startet sofort eine Aufnahme und sieht wie eine Abfrage aus.
 | `ER_FindeSender($id, $Name)` | Sendername zu Service-Referenz ("ORF 1" findet "ORF1 HD") |
 | `ER_Programm($id, $SRef, $Minuten, $Start)` | Programm eines Senders im Zeitfenster |
 | `ER_SucheSendung($id, $SRef, $Start, $ToleranzMinuten)` | die Sendung zu einer erwarteten Startzeit |
+| `ER_Laeuft($id, $SRef, $MitNaechster)` | was jetzt laeuft und was folgt - fuer EINEN Sender |
+| `ER_Uebersicht($id, $Sender, $MitNaechster, $MaxAlterSekunden)` | dasselbe fuer mehrere Sender (Fernsehseite) |
+| `ER_Picon($id, $SRef)` | Adresse des Senderlogos auf der Box |
+
+`$SRef` darf ueberall auch ein **Sendername** sein ("ORF 1"); bei mehreren gleich
+geschriebenen Sendern gewinnt die HD-Fassung. `$Sender` bei `ER_Uebersicht` ist eine
+Liste - Komma-getrennt, zeilenweise oder als JSON-Liste.
+
+**Warum die Uebersicht so gebaut ist:** OpenWebIf beantwortet Anfragen im selben
+Prozess, in dem Enigma2 auch das Fernsehbild macht. Deshalb `epgservicenow` /
+`epgservicenext` (je 1091 und 239 Bytes, 11 und 9 ms) statt einer Bouquet-Abfrage,
+hoechstens 20 Sender je Aufruf, ein Mindestabstand von 15 Sekunden zwischen zwei
+echten Laeufen (dazwischen kommt die Antwort aus der Ablage) und Abbruch der
+Schleife, sobald eine einzelne Abfrage ueber 1500 ms braucht.
+Gemessen an einer Vu+ Ultimo 4K: 10 Sender, 20 Abfragen, **176 ms** - die
+Antwortzeit der Box lag vorher wie nachher bei 9 ms.
+
+Die Picon-Adresse wird **gerechnet, nicht erfragt** (`/api/getpicon` gibt es in
+dieser Fassung nicht): aus `1:0:19:132F:3EF:1:C00000:0:0:0:` wird
+`http://<box>/picon/1_0_19_132F_3EF_1_C00000_0_0_0.png`. Das Bild holt spaeter der
+Browser, nicht das Modul.
 
 `$Minuten` ist eine **Dauer in Minuten**, hoechstens 1440. Ein Zeitstempel wird
 abgelehnt, ohne die Box anzufassen - siehe oben.

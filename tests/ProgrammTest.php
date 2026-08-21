@@ -127,5 +127,57 @@ $ms3 = (int) round((microtime(true) - $t0) * 1000);
 $pruefe('Zeitstempel als endTime abgefangen', $r3['ok'], false);
 $pruefe('  ohne Netzverkehr (< 50 ms)', $ms3 < 50, true);
 
+echo "\nGleichnamige Sender: HD gewinnt\n";
+$doppelt = [
+    ['ref' => '1:0:1:32CA:45D:1:C00000:0:0:0:',  'name' => 'ORF2',    'bouquet' => 'A', 'pos' => 1],
+    ['ref' => '1:0:19:1332:3EF:1:C00000:0:0:0:', 'name' => 'ORF2 HD', 'bouquet' => 'A', 'pos' => 2],
+    ['ref' => '1:0:1:AAAA:BBBB:1:C00000:0:0:0:', 'name' => 'Nur SD',  'bouquet' => 'A', 'pos' => 3],
+];
+$pruefe('"ORF 2" nimmt die HD-Fassung', Sender::finde($doppelt, 'ORF 2')['name'] ?? '', 'ORF2 HD');
+$pruefe('ohne HD bleibt es beim einzigen Treffer', Sender::finde($doppelt, 'Nur SD')['name'] ?? '', 'Nur SD');
+$pruefe('Diensttyp 19 ist HD', Sender::istHd('1:0:19:1332:3EF:1:C00000:0:0:0:'), true);
+$pruefe('Diensttyp 1 ist nicht HD', Sender::istHd('1:0:1:32CA:45D:1:C00000:0:0:0:'), false);
+
+echo "\nPicons - Pfad wird gerechnet, nicht erfragt\n";
+$pruefe('Referenz -> Dateiname',
+    Sender::piconName('1:0:19:132F:3EF:1:C00000:0:0:0:'), '1_0_19_132F_3EF_1_C00000_0_0_0');
+$pruefe('Kleinschreibung wird gross',
+    Sender::piconName('1:0:19:132f:3ef:1:c00000:0:0:0:'), '1_0_19_132F_3EF_1_C00000_0_0_0');
+$pruefe('angehaengter Sendername faellt weg',
+    Sender::piconName('1:0:19:132F:3EF:1:C00000:0:0:0:ORF1 HD'), '1_0_19_132F_3EF_1_C00000_0_0_0');
+// Auch eine Stream-Referenz traegt ihre zehn Felder vorne; die Adresse dahinter
+// gehoert nicht zum Dateinamen. OpenWebIf schneidet an derselben Stelle ab.
+$pruefe('Stream-Referenz: Adresse gehoert nicht zum Namen',
+    Sender::piconName('4097:0:1:0:0:0:0:0:0:0:http%3a//10.0.0.1%3a8001/stream'), '4097_0_1_0_0_0_0_0_0_0');
+$pruefe('zu kurze Referenz ergibt nichts', Sender::piconName('1:0:19'), '');
+
+echo "\nJetzt und gleich\n";
+$now  = $lade('epgservicenow.json');
+$next = $lade('epgservicenext.json');
+$e = Programm::ausEpgEinzeln($now);
+$pruefe('laufende Sendung erkannt', $e['titel'] ?? '', 'Beispielsendung');
+$pruefe('Episodentitel im Kurztext', $e['kurz'] ?? '', 'Erste Folge');
+$pruefe('Ende aus Start plus Dauer', $e['ende'] ?? 0, 1700003600);
+$pruefe('leere Antwort ergibt null', Programm::ausEpgEinzeln(['events' => []]), null);
+
+$m = Programm::mitFortschritt($e, 1700001800);           // 30 von 60 Minuten
+$pruefe('Fortschritt 50 %', $m['fortschritt'], 50);
+$pruefe('Restzeit 1800 s', $m['rest'], 1800);
+$pruefe('laeuft gerade', $m['laeuft'], true);
+
+$g = Programm::mitFortschritt((array) Programm::ausEpgEinzeln($next), 1700001800);
+$pruefe('Folgesendung laeuft noch nicht', $g['laeuft'], false);
+$pruefe('  und steht auf 0 %', $g['fortschritt'], 0);
+
+$v = Programm::mitFortschritt(['start' => 1700000000, 'ende' => 1700003600], 1700009999);
+$pruefe('vorbei -> 100 %', $v['fortschritt'], 100);
+$pruefe('vorbei -> keine Restzeit', $v['rest'], 0);
+
+echo "\nEndpunkte fuer jetzt/gleich sind gelistet\n";
+$pruefe('epgservicenow erlaubt', OpenWebIf::istErlaubt('epgservicenow'), true);
+$pruefe('epgservicenext erlaubt', OpenWebIf::istErlaubt('epgservicenext'), true);
+$pruefe('epgbouquet NICHT erlaubt', OpenWebIf::istErlaubt('epgbouquet'), false);
+$pruefe('epgnow (Bouquet) NICHT erlaubt', OpenWebIf::istErlaubt('epgnow'), false);
+
 echo "\n" . ($fehler === 0 ? "alles bestanden\n" : "$fehler Abweichung(en)\n");
 exit($fehler === 0 ? 0 : 1);

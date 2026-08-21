@@ -64,6 +64,18 @@ final class OpenWebIf
     ) {
     }
 
+    /**
+     * Basisadresse der Box - fuer statische Dateien wie die Picons.
+     *
+     * Bewusst getrennt von der Positivliste: `/picon/<name>.png` ist kein
+     * API-Aufruf, sondern eine Datei, die spaeter der Browser holt. Das Modul
+     * gibt nur die Adresse weiter und laedt selbst nichts.
+     */
+    public function basis(): string
+    {
+        return 'http://' . $this->host . ($this->port === 80 ? '' : ':' . $this->port) . '/';
+    }
+
     public function erreichbarkeitsPfad(): string
     {
         return 'statusinfo';
