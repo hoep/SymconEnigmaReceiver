@@ -73,7 +73,10 @@ final class Sender
                     continue;
                 }
                 $gesehen[$k] = true;
-                $sender[] = ['ref' => $ref, 'name' => $name, 'bouquet' => $bname, 'pos' => (int) ($s['pos'] ?? 0)];
+                // Der Rang des Bouquets zaehlt bei der Namenssuche: das erste ist
+                // auf jeder Enigma2-Box die selbst zusammengestellte Favoritenliste.
+                $sender[] = ['ref' => $ref, 'name' => $name, 'bouquet' => $bname,
+                             'bidx' => count($bouquets) - 1, 'pos' => (int) ($s['pos'] ?? 0)];
             }
         }
         return ['bouquets' => $bouquets, 'sender' => $sender];
@@ -128,33 +131,47 @@ final class Sender
         if ($g === '') {
             return null;
         }
-        // 1. genaue Uebereinstimmung der entschaerften Form. Es gibt oft mehrere:
-        //    "ORF2" und "ORF2 HD" ergeben beide "orf2". Dann gewinnt die
-        //    HD-Fassung (Diensttyp 19) - die SD-Eintraege in diesen Bouquets sind
-        //    vielfach Karteileichen ohne Programmdaten, und eine Uebersicht, die
-        //    fuer einen Sender nichts anzeigt, sieht aus wie ein Fehler.
-        $treffer = [];
+        // Bewertung statt zweier Durchlaeufe. Der Anlass ist eine echte
+        // Senderliste: "ORF 2" trifft woertlich den Eintrag "ORF2" - einen
+        // toten SD-Platzhalter ohne Programmdaten -, waehrend die brauchbare
+        // Fassung "ORF2O HD" im Favoritenbouquet steht. Wer nur auf den Namen
+        // schaut, waehlt die leere Kachel.
+        //
+        //   Namenstreffer   genau 100, Anfang 50
+        //   Favoritenliste  + 60  (das erste Bouquet ist die eigene Auswahl)
+        //   HD              + 10
+        //   Gleichstand     der kuerzere Name gewinnt - er liegt naeher an der Frage
+        //
+        // Die Gewichte sind so gewaehlt, dass ein Favorit einen woertlichen
+        // Treffer ausserhalb der Favoriten schlagen darf, ein blosser
+        // Namensanfang ohne Favoritenstatus aber nie.
+        $beste = null;
+        $bestwert = -1;
         foreach ($liste as $s) {
-            if (self::form($s['name']) === $g) {
-                $treffer[] = $s;
+            $f = self::form((string) $s['name']);
+            if ($f === '') {
+                continue;
+            }
+            if ($f === $g) {
+                $wert = 100;
+            } elseif (str_starts_with($f, $g)) {
+                $wert = 50;
+            } else {
+                continue;
+            }
+            if ((int) ($s['bidx'] ?? 99) === 0) {
+                $wert += 60;
+            }
+            if (self::istHd((string) $s['ref'])) {
+                $wert += 10;
+            }
+            $wert = $wert * 1000 - min(999, mb_strlen((string) $s['name']));
+            if ($wert > $bestwert) {
+                $bestwert = $wert;
+                $beste = $s;
             }
         }
-        if ($treffer !== []) {
-            foreach ($treffer as $s) {
-                if (self::istHd((string) $s['ref'])) {
-                    return $s;
-                }
-            }
-            return $treffer[0];
-        }
-        // 2. Sender, dessen Name mit dem Gesuchten beginnt ("ORF2" -> "ORF2 Europe")
-        foreach ($liste as $s) {
-            $f = self::form($s['name']);
-            if ($f !== '' && str_starts_with($f, $g)) {
-                return $s;
-            }
-        }
-        return null;
+        return $beste;
     }
 
     /**

@@ -135,6 +135,28 @@ $doppelt = [
 ];
 $pruefe('"ORF 2" nimmt die HD-Fassung', Sender::finde($doppelt, 'ORF 2')['name'] ?? '', 'ORF2 HD');
 $pruefe('ohne HD bleibt es beim einzigen Treffer', Sender::finde($doppelt, 'Nur SD')['name'] ?? '', 'Nur SD');
+
+// Der Fall aus der echten Senderliste: der woertliche Treffer ist ein toter
+// SD-Platzhalter, die brauchbare Fassung steht in der Favoritenliste.
+$echt = [
+    ['ref' => '1:0:19:132F:3EF:1:C00000:0:0:0:', 'name' => 'ORF2O HD',             'bouquet' => 'Favourites (TV)', 'bidx' => 0, 'pos' => 2],
+    ['ref' => '1:0:19:1333:3EF:1:C00000:0:0:0:', 'name' => 'ServusTV HD Oesterreich','bouquet' => 'Favourites (TV)', 'bidx' => 0, 'pos' => 3],
+    ['ref' => '1:0:1:32CA:45D:1:C00000:0:0:0:',  'name' => 'ORF2',                 'bouquet' => 'Austria ORF',      'bidx' => 2, 'pos' => 5],
+    ['ref' => '1:0:1:32CB:45D:1:C00000:0:0:0:',  'name' => 'ServusTV Deutschland', 'bouquet' => 'German Free SD',   'bidx' => 1, 'pos' => 9],
+    ['ref' => '1:0:19:1340:3EF:1:C00000:0:0:0:', 'name' => 'ORF2W HD',             'bouquet' => 'Austria ORF',      'bidx' => 2, 'pos' => 6],
+    ['ref' => '1:0:19:1350:3EF:1:C00000:0:0:0:', 'name' => 'ZDF HD',               'bouquet' => 'Favourites (TV)',  'bidx' => 0, 'pos' => 4],
+    ['ref' => '1:0:19:1351:3EF:1:C00000:0:0:0:', 'name' => 'ZDFneo HD',            'bouquet' => 'Favourites (TV)',  'bidx' => 0, 'pos' => 7],
+];
+$pruefe('"ORF 2" nimmt den Favoriten statt des toten SD-Eintrags',
+    Sender::finde($echt, 'ORF 2')['name'] ?? '', 'ORF2O HD');
+$pruefe('"ServusTV" nimmt Oesterreich aus den Favoriten',
+    Sender::finde($echt, 'ServusTV')['name'] ?? '', 'ServusTV HD Oesterreich');
+$pruefe('"ZDF" bleibt ZDF und wird nicht ZDFneo',
+    Sender::finde($echt, 'ZDF')['name'] ?? '', 'ZDF HD');
+$pruefe('"ZDFneo" findet weiterhin ZDFneo',
+    Sender::finde($echt, 'ZDFneo')['name'] ?? '', 'ZDFneo HD');
+$pruefe('"ORF2W" bleibt die Wiener Fassung',
+    Sender::finde($echt, 'ORF2W')['name'] ?? '', 'ORF2W HD');
 $pruefe('Diensttyp 19 ist HD', Sender::istHd('1:0:19:1332:3EF:1:C00000:0:0:0:'), true);
 $pruefe('Diensttyp 1 ist nicht HD', Sender::istHd('1:0:1:32CA:45D:1:C00000:0:0:0:'), false);
 
