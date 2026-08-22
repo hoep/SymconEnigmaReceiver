@@ -589,9 +589,11 @@ class EnigmaReceiver extends IPSModule
      */
     private function senderZelle(string $ref, string $name): string
     {
+        // Der Ordner, den die Adresse /tile/ wirklich bedient - das ist das
+        // Programmverzeichnis, NICHT webfront/user/img/picons. Dort sieht es
+        // genauso aus, wird von dieser Adresse aber nicht ausgeliefert.
         $datei = Sender::piconName($ref);
-        if ($datei === ''
-            || !is_file(rtrim(IPS_GetKernelDir(), '/') . '/webfront/user/img/picons/' . $datei . '.png')) {
+        if ($datei === '' || !is_file('/usr/share/symcon/tile/picons/' . $datei . '.png')) {
             return $name;   // ein Verweis ins Leere waere ein kaputtes Bild in jeder Zeile
         }
         return '<img src="/tile/picons/' . $datei . '.png" alt="' . htmlspecialchars($name, ENT_QUOTES)
