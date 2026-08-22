@@ -85,7 +85,12 @@ class EnigmaReceiver extends IPSModule
         $this->RegisterPropertyBoolean('Scharf', false);
         $this->RegisterPropertyInteger('Vorlauf', 2);          // Minuten vor der Sendung
         $this->RegisterPropertyInteger('Nachlauf', 2);         // Minuten nach der Sendung
-        $this->RegisterPropertyString('Verzeichnis', '');      // dirname am Receiver, leer = Vorgabe der Box
+        // Ablageort fuer Auftraege, die KEIN eigenes Ziel mitbringen - also fuer
+        // die von Hand programmierten aus dem Programmfuehrer. Der Serienrecorder
+        // bringt seines mit (<Basis>/<Serie>/Season <n>), damit die Folgen dort
+        // landen, wo der Bestandsscan sie sucht; diese Vorgabe fasst er nicht an.
+        // Leer = Vorgabe der Box.
+        $this->RegisterPropertyString('Verzeichnis', '');
         $this->RegisterPropertyInteger('Nachher', 3);          // afterevent: 3 = automatisch
 
         // Ruhe bis (Unix), letzter Fehlertext, erkannte OpenWebIf-Fassung.
@@ -1027,7 +1032,10 @@ class EnigmaReceiver extends IPSModule
                     ['type' => 'CheckBox', 'name' => 'Scharf', 'caption' => 'Scharf - Schreibaufrufe an den Receiver erlauben'],
                     ['type' => 'NumberSpinner', 'name' => 'Vorlauf', 'caption' => 'Vorlauf (Minuten vor der Sendung)', 'minimum' => 0, 'maximum' => 60],
                     ['type' => 'NumberSpinner', 'name' => 'Nachlauf', 'caption' => 'Nachlauf (Minuten nach der Sendung)', 'minimum' => 0, 'maximum' => 120],
-                    ['type' => 'ValidationTextBox', 'name' => 'Verzeichnis', 'caption' => 'Aufnahmeverzeichnis am Receiver (leer = Vorgabe der Box)'],
+                    ['type' => 'ValidationTextBox', 'name' => 'Verzeichnis', 'caption' => 'Ablage fuer Aufnahmen von Hand (leer = Vorgabe der Box)'],
+                    ['type' => 'Label', 'caption' => 'Gilt fuer Auftraege ohne eigenes Ziel - also fuer die aus dem Programmfuehrer. '
+                        . 'Der Serienrecorder bringt sein Ziel je Serie und Staffel selbst mit und wird davon nicht beruehrt. '
+                        . 'Der Pfad ist der des RECEIVERS, und der Ordner muss dort existieren: Enigma legt ihn nicht an.'],
                     ['type' => 'Select', 'name' => 'Nachher', 'caption' => 'Nach der Aufnahme', 'options' => [
                         ['caption' => 'nichts tun', 'value' => 0],
                         ['caption' => 'Standby', 'value' => 1],
