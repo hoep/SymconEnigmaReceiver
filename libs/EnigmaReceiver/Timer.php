@@ -126,6 +126,18 @@ final class Timer
             'justplay'    => 0,          // 0 = aufnehmen, 1 = nur umschalten
             'afterevent'  => $nachher,
             'repeated'    => 0,          // Einzeltermin
+            // Aufnahmezeiten an das EPG anpassen: die Box startet, wenn die
+            // Sendung im Datenstrom wirklich beginnt, und endet, wenn sie dort
+            // endet - Verschiebungen laufen damit von selbst mit.
+            //
+            // Zwei Anmerkungen dazu. Erstens setzt VTi das Kennzeichen ohnehin
+            // von sich aus (gemessen am 22.08.2026: alle sieben Timer der Box
+            // trugen autoadjust=1, auch die ohne diesen Parameter). Zweitens
+            // kennt OpenWebIf 1.2.5 den Parameter in seinem timeradd gar nicht -
+            // das Altskript schickte ihn, und er wurde verworfen. Beides spricht
+            // nicht dagegen, ihn zu senden: schadet er nichts, und aendert die
+            // Box ihre Vorgabe, steht er trotzdem da.
+            'autoadjust'  => 1,
         ];
         if ($verzeichnis !== '') {
             $args['dirname'] = $verzeichnis;

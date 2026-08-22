@@ -114,6 +114,13 @@ $pruefe('deckungsgleiche Sendung erkannt',
 $pruefe('anderer Sender nicht',
     Timer::schonProgrammiert($t, '1:0:19:AAAA:BBBB:1:C00000:0:0:0:', $erste['start'], $erste['ende']), null);
 
+echo "\nAufnahmezeiten an das EPG anpassen\n";
+$auf = Timer::bauAuftrag(['ref' => '1:0:19:1:1:1:C00000:0:0:0:', 'start' => 1700000000,
+                          'ende' => 1700003600, 'titel' => 'X', 'kurz' => '', 'eventId' => 0], 2, 3);
+$pruefe('autoadjust ist gesetzt', $auf['autoadjust'] ?? null, 1);
+$pruefe('Vorlauf abgezogen', $auf['begin'], 1700000000 - 120);
+$pruefe('Nachlauf addiert', $auf['end'], 1700003600 + 180);
+
 echo "\nSchreibpfad - die Absicherung\n";
 $w = new OpenWebIf('10.255.255.1');
 $pruefe('timeradd ist schreibend', OpenWebIf::istSchreibend('timeradd'), true);
