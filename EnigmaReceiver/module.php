@@ -568,11 +568,34 @@ class EnigmaReceiver extends IPSModule
 
         $zeilen = [['Sender', 'Beginn', 'Ende', 'Titel', 'Folge', 'Zustand']];
         foreach ($t as $x) {
-            $zeilen[] = [$x['sender'], date('d.m. H:i', $x['start']), date('H:i', $x['ende']),
+            $zeilen[] = [$this->senderZelle((string) $x['ref'], (string) $x['sender']),
+                         date('d.m. H:i', $x['start']), date('H:i', $x['ende']),
                          $x['name'], $x['beschreibung'], $x['aus'] ? 'aus' : $x['zustandText']];
         }
         $this->SetValue('TimerListe', $this->json($zeilen));
         return true;
+    }
+
+    /**
+     * Die Senderspalte einer Tabelle: das Logo, sonst der Name.
+     *
+     * Die Logos liegen bei Symcon (rund 2.900 Stueck) und gehen ueber /tile/
+     * hinaus - BEWUSST von dort und nicht von der Box: eine Tabelle mit 200
+     * Zeilen waeren sonst 200 Abrufe an ein Geraet, das nebenher fernsieht.
+     *
+     * Der Name steht als Alternativtext im Bild. Nicht nur der Hoeflichkeit
+     * halber: die Tabelle im Programmfuehrer sucht im Zellentext, und der ist
+     * hier das Bild.
+     */
+    private function senderZelle(string $ref, string $name): string
+    {
+        $datei = Sender::piconName($ref);
+        if ($datei === ''
+            || !is_file(rtrim(IPS_GetKernelDir(), '/') . '/webfront/user/img/picons/' . $datei . '.png')) {
+            return $name;   // ein Verweis ins Leere waere ein kaputtes Bild in jeder Zeile
+        }
+        return '<img src="/tile/picons/' . $datei . '.png" alt="' . htmlspecialchars($name, ENT_QUOTES)
+             . '" style="height:1.6em;vertical-align:middle">';
     }
 
     /** Programmierte Aufnahmen als JSON. */
