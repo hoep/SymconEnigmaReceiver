@@ -690,6 +690,29 @@ class EnigmaReceiver extends IPSModule
             'Timer umgeschaltet ' . date('d.m. H:i', $Begin));
     }
 
+    /**
+     * Welche Ablagen bietet der Receiver fuer Aufnahmen an?
+     *
+     * Die einzige verlaessliche Auskunft darueber. `timeradd` nimmt jeden Text
+     * als Verzeichnis an - auch einen, den die Box nicht kennt. Der Timer
+     * entsteht dann, und erst die Aufnahme scheitert.
+     */
+    public function Ablagen(): string
+    {
+        $a = $this->frage('getlocations');
+        if (!$a['ok']) {
+            return $this->json(['ok' => false, 'fehler' => $a['fehler']]);
+        }
+        $orte = [];
+        foreach ((array) ($a['daten']['locations'] ?? []) as $o) {
+            $o = trim((string) $o);
+            if ($o !== '') {
+                $orte[] = $o;
+            }
+        }
+        return $this->json(['ok' => true, 'anzahl' => count($orte), 'ms' => $a['ms'], 'ablagen' => $orte]);
+    }
+
     /** Scharf-Gate setzen. Bewusst als eigene Funktion, damit es im Log auftaucht. */
     public function SetzeScharf(bool $Scharf): bool
     {
@@ -1009,6 +1032,16 @@ class EnigmaReceiver extends IPSModule
 
     public function GetConfigurationForm(): string
     {
+        // Die Ablagen der Box gleich mitzeigen. Ein freies Textfeld laedt dazu
+        // ein, einen Pfad zu erfinden, den es dort nicht gibt - und niemand
+        // merkt es, weil timeradd ihn anstandslos annimmt.
+        $a = json_decode($this->Ablagen(), true);
+        $ablagen = empty($a['ok'])
+            ? 'Ablagen des Receivers gerade nicht abfragbar.'
+            : ($a['ablagen'] === []
+                ? 'Der Receiver meldet keine Aufnahmeablagen.'
+                : 'Der Receiver kennt diese Ablagen: ' . implode(' · ', $a['ablagen']));
+
         $ruhe   = $this->ReadAttributeInteger('RuheBis');
         $scharf = $this->ReadPropertyBoolean('Scharf');
 
@@ -1036,6 +1069,8 @@ class EnigmaReceiver extends IPSModule
                     ['type' => 'Label', 'caption' => 'Gilt fuer Auftraege ohne eigenes Ziel - also fuer die aus dem Programmfuehrer. '
                         . 'Der Serienrecorder bringt sein Ziel je Serie und Staffel selbst mit und wird davon nicht beruehrt. '
                         . 'Der Pfad ist der des RECEIVERS, und der Ordner muss dort existieren: Enigma legt ihn nicht an.'],
+                    ['type' => 'Label', 'caption' => $ablagen],
+                    ['type' => 'Button', 'caption' => 'Ablagen des Receivers zeigen', 'onClick' => 'echo ER_Ablagen($id);'],
                     ['type' => 'Select', 'name' => 'Nachher', 'caption' => 'Nach der Aufnahme', 'options' => [
                         ['caption' => 'nichts tun', 'value' => 0],
                         ['caption' => 'Standby', 'value' => 1],

@@ -29,6 +29,12 @@ final class OpenWebIf
         'powerstate', 'getcurrent', 'bouquets', 'getservices', 'getallservices',
         'timerlist', 'epgservice', 'epgservicenow', 'epgservicenext', 'epgsearch',
         'servicelistplayable', 'tunersignal', 'settings', 'movielist',
+        // Die Ablagen, die die Box fuer Aufnahmen anbietet. Winzige Antwort und
+        // die einzige verlaessliche Auskunft darueber, welche Verzeichnisse es
+        // dort ueberhaupt gibt: timeradd nimmt jeden Text an, auch einen, den
+        // der Receiver gar nicht kennt - der Timer entsteht, die Aufnahme
+        // scheitert spaeter.
+        'getlocations', 'getcurrlocation',
     ];
 
     /**
