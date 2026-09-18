@@ -3,6 +3,29 @@
 Symcon-Modul fuer Enigma2-Receiver (Vu+, Dreambox und verwandte) ueber die
 OpenWebIf-Schnittstelle. Eine Instanz je Geraet.
 
+
+## Voraussetzungen
+
+- IP-Symcon ab Kernel 7.1, PHP 8
+- Ein Enigma2-Receiver (Vu+, Dreambox und verwandte) mit **aktiviertem OpenWebIf**
+  im selben Netz. Steht dort ein Passwort, gehoert es in die Instanz.
+
+## Installation
+
+Konsole → *Kern-Instanzen* → **Modules** → Hinzufuegen:
+
+```
+https://github.com/hoep/SymconEnigmaReceiver
+```
+
+Danach je Receiver eine Instanz `EnigmaReceiver` anlegen, Adresse und - falls
+gesetzt - Zugangsdaten eintragen. Der Rest wird beim ersten Abruf selbst
+aufgebaut.
+
+## Lizenz
+
+MIT - siehe `LICENSE`.
+
 ## Stand
 
 Alle drei Stufen gebaut:

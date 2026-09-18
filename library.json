@@ -3,6 +3,9 @@
     "author": "Hoep",
     "name": "EnigmaReceiver",
     "url": "https://github.com/hoep/SymconEnigmaReceiver",
+    "compatibility": {
+        "version": "7.1"
+    },
     "version": "0.2.0",
     "build": 0,
     "date": 0
